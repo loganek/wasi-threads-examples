@@ -1,0 +1,29 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    name: Build and run
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install WASI SDK
+      run: |
+        wget https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-20/wasi-sdk-20.0-linux.tar.gz -O /opt/wasi-sdk.tar.gz
+        cd /opt && tar xzvf wasi-sdk.tar.gz
+    - name: Download iwasm
+      run: |
+        wget https://github.com/bytecodealliance/wasm-micro-runtime/releases/download/WAMR-1.2.1/iwasm-1.2.1-x86_64-ubuntu-22.04.tar.gz -O /opt/iwasm.tar.gz
+        cd /opt && tar xzvf iwasm.tar.gz
+    - name: Compile examples
+      run: |
+        cmake -DWASI_SDK_PREFIX=/opt/wasi-sdk-20.0 -DCMAKE_TOOLCHAIN_FILE=/opt/wasi-sdk-20.0/share/cmake/wasi-sdk-pthread.cmake .
+        make
+    - name: Run hello world example
+      run: /opt/iwasm --llvm-jit --max-threads=8 hello_world/hello_world.wasm 4
+    - name: Run merge sort example
+      run: time /opt/iwasm --llvm-jit --max-threads=8 merge_sort/merge_sort.wasm 10000000 2
